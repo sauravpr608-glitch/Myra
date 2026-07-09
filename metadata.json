@@ -1,5 +1,5 @@
 {
-  "name": "MYRA",
+  "name": "Zoya App",
   "description": "Ultimately powerful system-level AI voice companion driven by Gemini and integrated with advanced device triggers, code generation, real-time map navigation, and social posting APIs.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

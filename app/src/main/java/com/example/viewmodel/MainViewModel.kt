@@ -60,6 +60,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _netlifyToken = MutableStateFlow("")
     val netlifyToken: StateFlow<String> = _netlifyToken.asStateFlow()
 
+    // Monetization & Ad-Gate States
+    private val _isSessionLocked = MutableStateFlow(true)
+    val isSessionLocked: StateFlow<Boolean> = _isSessionLocked.asStateFlow()
+
+    private val _sessionTimeRemaining = MutableStateFlow(0) // in seconds
+    val sessionTimeRemaining: StateFlow<Int> = _sessionTimeRemaining.asStateFlow()
+
+    private var countdownJob: kotlinx.coroutines.Job? = null
+
     // Waveform simulation amplitudes for pulsing animations
     private val _waveformAmplitudes = MutableStateFlow(List(20) { 0.1f })
     val waveformAmplitudes: StateFlow<List<Float>> = _waveformAmplitudes.asStateFlow()
@@ -70,6 +79,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         initClient()
         startWaveformSimulator()
+        viewModelScope.launch {
+            delay(1000)
+            val welcomeText = "Saurav bhai ke Zoya App me aapka swagat hai! Mujhse 15 minute live baat karne ke liye, kirpa karke screen par diye gaye 'Watch Video' button par click karke ek chhota ad dekhein."
+            liveClient?.addLogMessage("Zoya", welcomeText, false)
+        }
     }
 
     private fun initClient() {
@@ -101,6 +115,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun connectMYRA() {
+        if (_isSessionLocked.value) {
+            speakLockedMessage()
+            return
+        }
         _isUserConnecting.value = true
         liveClient?.connect()
     }
@@ -115,11 +133,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.selectedModel = model
             it.selectedVoice = voice
             it.selectedMode = mode
-            it.addLogMessage("MYRA", "Configuration complete. Model: $model | Voice: $voice | Personality: $mode", true)
+            it.addLogMessage("Zoya", "Configuration complete. Model: $model | Voice: $voice | Personality: $mode", true)
         }
     }
 
     fun toggleListening() {
+        if (_isSessionLocked.value) {
+            speakLockedMessage()
+            return
+        }
         _isListening.value = !_isListening.value
         val micOn = _isListening.value
         
@@ -128,13 +150,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             liveClient?.addLogMessage("You", "[Recording voice command...]", false)
             // Simulated local transcript generation if API offline, or user submits voice
         } else {
-            liveClient?.addLogMessage("MYRA", "Processing transcript stream...", true)
+            liveClient?.addLogMessage("Zoya", "Processing transcript stream...", true)
         }
     }
 
     fun submitTextCommand(commandText: String) {
         if (commandText.isEmpty()) return
         liveClient?.addLogMessage("You", commandText, false)
+
+        if (_isSessionLocked.value) {
+            speakLockedMessage()
+            return
+        }
 
         viewModelScope.launch {
             // Run locally through CommandParser to scan for system intents
@@ -146,6 +173,59 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 generateSmartResponse(commandText)
             }
         }
+    }
+
+    fun speakLockedMessage() {
+        viewModelScope.launch {
+            val lockedText = "Saurav bhai ke Zoya App me aapka swagat hai! Mujhse 15 minute live baat karne ke liye, kirpa karke screen par diye gaye 'Watch Video' button par click karke ek chhota ad dekhein."
+            liveClient?.addLogMessage("Zoya", lockedText, false)
+            speakMockVoice(lockedText)
+        }
+    }
+
+    fun triggerUnityAdAndUnlock() {
+        viewModelScope.launch {
+            liveClient?.addLogMessage("System", "Initializing Unity Ads SDK [Game ID: 800083344]...", true)
+            delay(1000)
+            liveClient?.addLogMessage("System", "Loading Rewarded Video Ad Placement: 'Rewarded_Android'...", true)
+            delay(1000)
+            liveClient?.addLogMessage("System", "Playing video ad... Placement State: SHOWING", true)
+            delay(3000) // 3 seconds visual delay representing ad showtime
+            
+            _sessionTimeRemaining.value = 900 // 15 minutes = 900 seconds
+            _isSessionLocked.value = false
+            
+            countdownJob?.cancel()
+            countdownJob = viewModelScope.launch {
+                while (_sessionTimeRemaining.value > 0) {
+                    delay(1000)
+                    _sessionTimeRemaining.value -= 1
+                }
+                lockSessionDueToTimeout()
+            }
+
+            val successMsg = "Aapka session token ab active hai! 15 minutes tak aap bina kisi rukavat ke mujhse live baat kar sakte hain. ❤️"
+            liveClient?.addLogMessage("Zoya", successMsg, false)
+            speakMockVoice(successMsg)
+            
+            // Auto connect to voice when unlocked!
+            _isUserConnecting.value = true
+            liveClient?.connect()
+        }
+    }
+
+    fun lockSessionDueToTimeout() {
+        countdownJob?.cancel()
+        _isSessionLocked.value = true
+        _sessionTimeRemaining.value = 0
+        if (_isListening.value) {
+            _isListening.value = false
+        }
+        disconnectMYRA()
+        
+        val timeoutMessage = "Aapka 15 minute ka live session samapt ho gaya hai. Kirpa karke ek chhota video ad dekh kar naya session chalu karein."
+        liveClient?.addLogMessage("Zoya", timeoutMessage, false)
+        speakMockVoice(timeoutMessage)
     }
 
     private suspend fun generateSmartResponse(prompt: String) {
@@ -161,7 +241,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lowercase.contains("kise ho") || lowercase.contains("how are you") -> 
                             "Main bilkul theek hoon babu! ❤️ Aap batao, aapka din kaisa raha? Kuch kaam hai toh bataiye, map set kar deti hoon 😊"
                         lowercase.contains("naam") || lowercase.contains("your name") -> 
-                            "Mere pyare dost, mera naam MYRA hai! Main aapki dedicated voice companion hoon. ❤️"
+                            "Mere pyare dost, mera naam Zoya hai! Main aapki dedicated voice companion hoon. ❤️"
                         lowercase.contains("khana") || lowercase.contains("food") -> 
                             "Aapne khana khaya? 🥺 Apna dhyan rakha karo na! Main toh bas data consume karti hoon par aapka dhyan rakhna mera pehla kaam hai."
                         else -> 
@@ -172,11 +252,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     "Understood. Initiating contextual analysis. I am programmed to process operations such as location updates, code compilations, netlify deployments, and systems configurations. Advise how to proceed."
                 }
                 else -> { // Assistant Mode
-                    "I am MYRA, your automation assistant. I can fetch exact coordinates, compile zip projects, trigger playbacks, or copy social post drafts. Ready for voice orders!"
+                    "I am Zoya, your automation assistant. I can fetch exact coordinates, compile zip projects, trigger playbacks, or copy social post drafts. Ready for voice orders!"
                 }
             }
         }
-        liveClient?.addLogMessage("MYRA", response, false)
+        liveClient?.addLogMessage("Zoya", response, false)
         speakMockVoice(response)
     }
 

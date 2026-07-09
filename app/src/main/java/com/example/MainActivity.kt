@@ -183,6 +183,10 @@ fun MyraMainScreen(
     val waveformAmplitudes by viewModel.waveformAmplitudes.collectAsState()
     val netlifyToken by viewModel.netlifyToken.collectAsState()
 
+    val isSessionLocked by viewModel.isSessionLocked.collectAsState()
+    val sessionTimeRemaining by viewModel.sessionTimeRemaining.collectAsState()
+    var showAdVideoPlayer by remember { mutableStateOf(false) }
+
     var textInput by remember { mutableStateOf("") }
     val lazyListState = rememberLazyListState()
 
@@ -223,7 +227,11 @@ fun MyraMainScreen(
                 .padding(horizontal = 16.dp)
         ) {
             // Monospace Telemetry Counters Header
-            TelemetryHeaderSection(onRequestOverlayPermission)
+            TelemetryHeaderSection(
+                isSessionLocked = isSessionLocked,
+                sessionTimeRemaining = sessionTimeRemaining,
+                onRequestOverlayPermission = onRequestOverlayPermission
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -256,7 +264,7 @@ fun MyraMainScreen(
                             GeminiLiveClient.ClientState.CONNECTED -> "NEURAL LINK GREEN / SPECS STABLE"
                             GeminiLiveClient.ClientState.CONNECTING -> "SYNCING QUANTUM CHANNELS..."
                             GeminiLiveClient.ClientState.ERROR -> "QUANTUM BREAK DETECTED / SIM RUNNING"
-                            else -> "MYRA SYSTEM OFFLINE / STANDBY"
+                            else -> "ZOYA SYSTEM OFFLINE / STANDBY"
                         },
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
@@ -281,7 +289,80 @@ fun MyraMainScreen(
                     .border(1.dp, Color(0xFFFF1744).copy(alpha = 0.2f), RoundedCornerShape(16.dp))
                     .padding(12.dp)
             ) {
-                if (transcript.isEmpty()) {
+                if (isSessionLocked) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Locked Session",
+                                tint = Color(0xFFFF1744),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Text(
+                                text = "ZOYA APP AD-GATE SYSTEM",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF1744),
+                                letterSpacing = 2.sp
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Text(
+                                text = "Saurav bhai ke Zoya App me aapka swagat hai! Mujhse 15 minute live baat karne ke liye, kirpa karke screen par diye gaye 'Watch Video' button par click karke ek chhota ad dekhein.",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(20.dp))
+                            
+                            Button(
+                                onClick = { showAdVideoPlayer = true },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFD500F9)
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("watch_video_button"),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = "Watch Icon",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Watch Video",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if (transcript.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -347,11 +428,114 @@ fun MyraMainScreen(
 
             Spacer(modifier = Modifier.navigationBarsPadding().height(16.dp))
         }
+
+        // Animated Ad Video Player simulation overlay Box blocking underlying interaction
+        if (showAdVideoPlayer) {
+            var adCountdown by remember { mutableStateOf(5) }
+            LaunchedEffect(Unit) {
+                while (adCountdown > 0) {
+                    delay(1000)
+                    adCountdown -= 1
+                }
+                viewModel.triggerUnityAdAndUnlock()
+                showAdVideoPlayer = false
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFA05020B))
+                    .clickable(enabled = false) {}, // consume clicks to block background interaction
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    // Unity Ads Logo Header
+                    Text(
+                        text = "unity ads",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        letterSpacing = 1.sp,
+                        fontFamily = FontFamily.SansSerif
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "REWARDED VIDEO AD RUNNING",
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFF00FFCC),
+                        letterSpacing = 1.5.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // High tech simulated neural visualizer frame
+                    Box(
+                        modifier = Modifier
+                            .size(180.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF0C0714))
+                            .border(2.dp, Color(0xFFD500F9), RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            progress = adCountdown / 5f,
+                            color = Color(0xFFFF1744),
+                            strokeWidth = 6.dp,
+                            modifier = Modifier.size(100.dp)
+                        )
+                        Text(
+                            text = "$adCountdown",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // Metadata specs
+                    Text(
+                        text = "Game ID: 800083344",
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = "Placement: Rewarded_Android",
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Please do not close this ad screen. Your reward will be granted automatically in a few seconds.",
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color.White.copy(alpha = 0.4f),
+                        modifier = Modifier.widthIn(max = 280.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun TelemetryHeaderSection(onRequestOverlayPermission: () -> Unit) {
+fun TelemetryHeaderSection(
+    isSessionLocked: Boolean,
+    sessionTimeRemaining: Int,
+    onRequestOverlayPermission: () -> Unit
+) {
     val context = LocalContext.current
     var memoryInUse by remember { mutableStateOf(0L) }
     var batteryLevel by remember { mutableStateOf(0) }
@@ -377,6 +561,10 @@ fun TelemetryHeaderSection(onRequestOverlayPermission: () -> Unit) {
         }
     }
 
+    val minutes = sessionTimeRemaining / 60
+    val seconds = sessionTimeRemaining % 60
+    val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -390,7 +578,11 @@ fun TelemetryHeaderSection(onRequestOverlayPermission: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TelemetryIndicator(label = "RAM", value = "${memoryInUse}MB")
             TelemetryIndicator(label = "BATT", value = "$batteryLevel%")
-            TelemetryIndicator(label = "NET", value = "GREEN")
+            TelemetryIndicator(
+                label = "ZOYA",
+                value = if (isSessionLocked) "LOCKED" else timeFormatted,
+                valueColor = if (isSessionLocked) Color(0xFFFF1744) else Color(0xFF00FFCC)
+            )
         }
 
         IconButton(
@@ -417,7 +609,7 @@ fun TelemetryHeaderSection(onRequestOverlayPermission: () -> Unit) {
 }
 
 @Composable
-fun TelemetryIndicator(label: String, value: String) {
+fun TelemetryIndicator(label: String, value: String, valueColor: Color = Color(0xFF00FFCC)) {
     Row {
         Text(
             text = "$label:",
@@ -429,7 +621,7 @@ fun TelemetryIndicator(label: String, value: String) {
             text = value,
             fontFamily = FontFamily.Monospace,
             fontSize = 11.sp,
-            color = Color(0xFF00FFCC),
+            color = valueColor,
             modifier = Modifier.padding(start = 2.dp)
         )
     }
@@ -592,7 +784,7 @@ fun AudioWaveformRow(amplitudes: List<Float>) {
 
 @Composable
 fun ConsoleBubbleCard(message: ChatMessage) {
-    val isMyra = message.sender == "MYRA"
+    val isMyra = message.sender == "MYRA" || message.sender == "Zoya"
     val isSystem = message.isSystem
 
     val cardBg = when {
@@ -785,7 +977,7 @@ fun ConsoleBottomRow(
         ) {
             Icon(
                 imageVector = if (isListening) Icons.Default.Favorite else Icons.Default.PlayArrow,
-                contentDescription = "Ask MYRA via Voice",
+                contentDescription = "Ask ZOYA via Voice",
                 tint = if (isListening) Color.White else Color(0xFFFF1744)
             )
         }
@@ -1024,7 +1216,7 @@ fun MyraSettingsLayout(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(modifier = Modifier.size(6.dp).background(Color(0xFF00FFCC), CircleShape))
                     Text(
-                        "MYRA TERMINAL TELEMETRY",
+                        "ZOYA TERMINAL TELEMETRY",
                         color = Color(0xFF00FFCC),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
